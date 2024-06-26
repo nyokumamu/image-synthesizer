@@ -108,7 +108,9 @@ project-root/
 2. 設定ファイルを `conf/` ディレクトリに作成します。
 3. 次のコマンドを使用してプログラムを実行します：
 
+```
 go run main.go --conf your_config.json
+```
 
 `your_config.json` を設定ファイルの名前に置き換えてください。
 
