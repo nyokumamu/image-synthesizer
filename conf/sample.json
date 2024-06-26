@@ -1,0 +1,55 @@
+{
+    "bgImg": {
+        "filePath": "background.png"
+    },
+    "compositeItemList": [
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 1,
+                "scale": 1.0,
+                "pos": {
+                    "x": 40,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "image1.png"
+            }
+        },
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 2,
+                "scale": 1.0,
+                "pos": {
+                    "x": 60,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "image2.png"
+            }
+        },
+        {
+            "commonParam": {
+                "type": "text",
+                "depth": 3,
+                "scale": 1.0,
+                "pos": {
+                    "x": 50,
+                    "y": 75
+                },
+                "align": "center"
+            },
+            "specificParam": {
+                "text": "Hello, World!",
+                "font": "Arial Unicode",
+                "color": "#FF0000"
+            }
+        }
+    ],
+    "outputImg": {
+        "fileName": "output.png"
+    }
+}
