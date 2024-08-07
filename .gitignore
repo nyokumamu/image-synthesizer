@@ -1,3 +1,4 @@
 src/*
 dst/*
+conf/*
 .DS_Store
