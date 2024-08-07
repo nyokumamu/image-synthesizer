@@ -8,20 +8,16 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
-	"runtime"
-	"sort"
 	"strings"
 
 	"github.com/disintegration/imaging"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
 
 type Config struct {
-	BgImg            ImageConfig     `json:"bgImg"`
+	BgImg             ImageConfig     `json:"bgImg"`
 	CompositeItemList []CompositeItem `json:"compositeItemList"`
-	OutputImg        OutputImage     `json:"outputImg"`
 }
 
 type ImageConfig struct {
@@ -34,11 +30,11 @@ type CompositeItem struct {
 }
 
 type CommonParam struct {
-	Type   string   `json:"type"`
-	Depth  int      `json:"depth"`
-	Scale  float64  `json:"scale"`
-	Pos    Position `json:"pos"`
-	Align  string   `json:"align,omitempty"`
+	Type  string   `json:"type"`
+	Depth int      `json:"depth"`
+	Scale float64  `json:"scale"`
+	Pos   Position `json:"pos"`
+	Align string   `json:"align,omitempty"`
 }
 
 type SpecificParam struct {
@@ -51,10 +47,6 @@ type SpecificParam struct {
 type Position struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
-}
-
-type OutputImage struct {
-	FileName string `json:"fileName"`
 }
 
 func loadImage(filePath string) (image.Image, error) {
@@ -89,159 +81,88 @@ func drawText(img *image.NRGBA, text string, pos image.Point, col color.Color, f
 	lines := strings.Split(text, "\\n")
 	for i, line := range lines {
 		var x fixed.Int26_6
-		textWidth := font.MeasureString(fontFace, line).Ceil()
+		textWidth := font.MeasureString(fontFace, line).Round()
 		switch align {
 		case "center":
-			x = fixed.I(pos.X) - fixed.I(textWidth/2)
+			x = fixed.I(pos.X - textWidth/2)
 		case "right":
-			x = fixed.I(pos.X) - fixed.I(textWidth)
+			x = fixed.I(pos.X - textWidth)
 		default:
 			x = fixed.I(pos.X)
 		}
-
+		y := pos.Y + i*fontFace.Metrics().Height.Ceil()
 		d := &font.Drawer{
 			Dst:  img,
 			Src:  image.NewUniform(col),
 			Face: fontFace,
-			Dot:  fixed.Point26_6{
-				X: x,
-				Y: fixed.I(pos.Y) + fixed.I(i*int(fontFace.Metrics().Height.Ceil())),
-			},
+			Dot:  fixed.Point26_6{X: x, Y: fixed.I(y)},
 		}
 		d.DrawString(line)
 	}
 }
 
 func main() {
-	configFileName := flag.String("conf", "config.json", "Configuration file name")
+	// 設定ファイルパスのフラグを追加
+	configPath := flag.String("conf", "", "設定JSONファイルのパス")
 	flag.Parse()
 
-	configPath := filepath.Join("conf", *configFileName)
-
-	configFile, err := os.Open(configPath)
+	// 設定ファイルを読み込む
+	configFile, err := os.Open(*configPath)
 	if err != nil {
-		fmt.Println("Error opening config file:", err)
+		fmt.Println("設定ファイルを開く際のエラー:", err)
 		return
 	}
 	defer configFile.Close()
 
 	var config Config
 	if err := json.NewDecoder(configFile).Decode(&config); err != nil {
-		fmt.Println("Error decoding config file:", err)
+		fmt.Println("設定ファイルをデコードする際のエラー:", err)
 		return
 	}
 
-	bgImgPath := filepath.Join("src", config.BgImg.FilePath)
-	bgImg, err := loadImage(bgImgPath)
+	// 設定ファイルのパスを基に出力ファイルのパスを決定
+	relPath, err := filepath.Rel("conf", *configPath)
 	if err != nil {
-		fmt.Println("Error loading background image:", err)
+		fmt.Println("設定ファイルの相対パスを取得する際のエラー:", err)
 		return
 	}
+	outputFilePath := filepath.Join("dst", strings.TrimSuffix(relPath, filepath.Ext(relPath))+".png")
 
-	outputImg := imaging.Clone(bgImg)
-
-	sort.Slice(config.CompositeItemList, func(i, j int) bool {
-		return config.CompositeItemList[i].CommonParam.Depth < config.CompositeItemList[j].CommonParam.Depth
-	})
-
-	fontCache := make(map[string]font.Face)
-
-	for _, item := range config.CompositeItemList {
-		switch item.CommonParam.Type {
-		case "image":
-			imgPath := filepath.Join("src", item.SpecificParam.FilePath)
-			img, err := loadImage(imgPath)
-			if err != nil {
-				fmt.Printf("Error loading composite image %s: %v\n", item.SpecificParam.FilePath, err)
-				continue
-			}
-
-			scaledImg := imaging.Resize(img, int(float64(img.Bounds().Dx())*item.CommonParam.Scale), int(float64(img.Bounds().Dy())*item.CommonParam.Scale), imaging.Lanczos)
-
-			bgWidth := outputImg.Bounds().Dx()
-			bgHeight := outputImg.Bounds().Dy()
-			posX := int(float64(bgWidth) * (item.CommonParam.Pos.X / 100.0))
-			posY := int(float64(bgHeight) * (item.CommonParam.Pos.Y / 100.0))
-
-			posX -= scaledImg.Bounds().Dx() / 2
-			posY -= scaledImg.Bounds().Dy() / 2
-
-			outputImg = imaging.Overlay(outputImg, scaledImg, image.Pt(posX, posY), 1.0)
-
-		case "text":
-			bgWidth := outputImg.Bounds().Dx()
-			bgHeight := outputImg.Bounds().Dy()
-			posX := int(float64(bgWidth) * (item.CommonParam.Pos.X / 100.0))
-			posY := int(float64(bgHeight) * (item.CommonParam.Pos.Y / 100.0))
-
-			col, err := parseHexColor(item.SpecificParam.Color)
-			if err != nil {
-				fmt.Printf("Error parsing color %s: %v\n", item.SpecificParam.Color, err)
-				return
-			}
-
-			fontFace, ok := fontCache[item.SpecificParam.Font]
-			if !ok {
-				var fontDir string
-				switch runtime.GOOS {
-				case "windows":
-					fontDir = `C:\Windows\Fonts`
-				case "darwin":
-					fontDir = `/Library/Fonts`
-				default:
-					fmt.Println("Unsupported operating system")
-					return
-				}
-				fontPath := filepath.Join(fontDir, item.SpecificParam.Font+".ttf")
-
-				if _, err := os.Stat(fontPath); os.IsNotExist(err) {
-					fmt.Printf("Font file does not exist: %s\n", fontPath)
-					return
-				}
-
-				fontBytes, err := os.ReadFile(fontPath)
-				if err != nil {
-					fmt.Printf("Error loading font %s: %v\n", fontPath, err)
-					return
-				}
-				f, err := opentype.Parse(fontBytes)
-				if err != nil {
-					fmt.Printf("Error parsing font %s: %v\n", fontPath, err)
-					return
-				}
-
-				const dpi = 72
-				fontFace, err = opentype.NewFace(f, &opentype.FaceOptions{
-					Size:    float64(item.CommonParam.Scale * 12),
-					DPI:     dpi,
-					Hinting: font.HintingFull,
-				})
-				if err != nil {
-					fmt.Printf("Error creating font face %s: %v\n", fontPath, err)
-					return
-				}
-
-				fontCache[item.SpecificParam.Font] = fontFace
-			}
-
-			rgbaImg := outputImg
-			drawText(rgbaImg, item.SpecificParam.Text, image.Pt(posX, posY), col, fontFace, item.CommonParam.Align)
-			outputImg = rgbaImg
+	// 出力ディレクトリが存在しない場合は作成
+	outputDir := filepath.Dir(outputFilePath)
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+			fmt.Println("出力ディレクトリを作成する際のエラー:", err)
+			return
 		}
 	}
 
-	outputDir := "dst"
-	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
-		fmt.Println("Error creating output directory:", err)
-		return
-	}
-	outputFilePath := filepath.Join(outputDir, config.OutputImg.FileName)
-
-	if err := imaging.Save(outputImg, outputFilePath); err != nil {
-		fmt.Println("Error saving output image:", err)
+	// 背景画像の読み込み (srcディレクトリを前置)
+	bgImage, err := loadImage(filepath.Join("src", config.BgImg.FilePath))
+	if err != nil {
+		fmt.Println("背景画像を読み込む際のエラー:", err)
 		return
 	}
 
-	fmt.Println("Image composite completed successfully!")
+	// 出力画像の作成
+	dstImage := imaging.Clone(bgImage)
+
+	// 合成アイテムの処理 (srcディレクトリを前置)
+	for _, item := range config.CompositeItemList {
+		itemImage, err := loadImage(filepath.Join("src", item.SpecificParam.FilePath))
+		if err != nil {
+			fmt.Println("アイテム画像を読み込む際のエラー:", err)
+			return
+		}
+		pos := image.Pt(int(item.CommonParam.Pos.X), int(item.CommonParam.Pos.Y))
+		dstImage = imaging.Overlay(dstImage, itemImage, pos, item.CommonParam.Scale)
+	}
+
+	// 画像を保存
+	if err := imaging.Save(dstImage, outputFilePath); err != nil {
+		fmt.Println("出力画像を保存する際のエラー:", err)
+		return
+	}
+
+	fmt.Println("出力画像を保存しました:", outputFilePath)
 }
-

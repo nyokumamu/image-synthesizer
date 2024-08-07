@@ -1,0 +1,38 @@
+{
+    "bgImg": {
+        "filePath": "background.png"
+    },
+    "compositeItemList": [
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 1,
+                "scale": 1.0,
+                "pos": {
+                    "x": 50,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "eventTitle/eventTitle_fullsize_2408.png"
+            }
+        },
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 2,
+                "scale": 1.0,
+                "pos": {
+                    "x": 50,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "rank/04.png"
+            }
+        }
+    ],
+    "outputImg": {
+        "fileName": "202408_4.png"
+    }
+}

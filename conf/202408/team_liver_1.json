@@ -1,0 +1,52 @@
+{
+    "bgImg": {
+        "filePath": "team/background/blue.png"
+    },
+    "compositeItemList": [
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 1,
+                "scale": 1.0,
+                "pos": {
+                    "x": 50,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "team/eventIcon/eventTitle_fullsize_2408.png"
+            }
+        },
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 2,
+                "scale": 1.0,
+                "pos": {
+                    "x": 50,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "team/teamIcon_v2/listener/kaze_topfan.png"
+            }
+        },
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 3,
+                "scale": 1.0,
+                "pos": {
+                    "x": 50,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "team/number/no1.png"
+            }
+        }
+    ],
+    "outputImg": {
+        "fileName": "202408_team_liver.png"
+    }
+}

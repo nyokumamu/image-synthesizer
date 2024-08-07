@@ -1,0 +1,38 @@
+{
+    "bgImg": {
+        "filePath": "team/background/purple.png"
+    },
+    "compositeItemList": [
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 1,
+                "scale": 1.0,
+                "pos": {
+                    "x": 50,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "team/eventIcon/eventTitle_fullsize_2407.png"
+            }
+        },
+        {
+            "commonParam": {
+                "type": "image",
+                "depth": 2,
+                "scale": 1.0,
+                "pos": {
+                    "x": 50,
+                    "y": 50
+                }
+            },
+            "specificParam": {
+                "filePath": "team/teamIcon/liver/kaze_7500.png"
+            }
+        }
+    ],
+    "outputImg": {
+        "fileName": "202407_team_liver.png"
+    }
+}

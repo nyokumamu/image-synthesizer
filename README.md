@@ -78,10 +78,7 @@ project-root/
                 "color": "#FF0000"
             }
         }
-    ],
-    "outputImg": {
-        "fileName": "output.png"
-    }
+    ]
 }
 ```
 
@@ -101,8 +98,6 @@ project-root/
     - `text`: テキスト内容（`text` タイプの場合）。
     - `font`: フォント名（`text` タイプの場合）。
     - `color`: テキストの色（`text` タイプの場合）。
-- `outputImg`: 出力画像の設定。
-  - `fileName`: 出力画像のファイル名。
 
 ## セットアップ
 
