@@ -20,7 +20,7 @@
         {
             "commonParam": {
                 "type": "image",
-                "depth": 2,
+                "depth": 3,
                 "scale": 1.0,
                 "pos": {
                     "x": 50,

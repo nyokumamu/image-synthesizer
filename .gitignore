@@ -1,4 +1,10 @@
-src/*
-dst/*
-conf/*
+/src/**
+!/src/**/
+!/src/**/.gitkeep
+/dst/**
+!/dst/**/
+!/dst/**/.gitkeep
+/conf/**
+!/conf/**/
+!/conf/**/.gitkeep
 .DS_Store
