@@ -154,8 +154,15 @@ func main() {
 			fmt.Println("アイテム画像を読み込む際のエラー:", err)
 			return
 		}
-		pos := image.Pt(int(item.CommonParam.Pos.X), int(item.CommonParam.Pos.Y))
+		bgWidth := dstImage.Bounds().Dx()
+		bgHeight := dstImage.Bounds().Dy()
+		posX := int(float64(bgWidth) * (item.CommonParam.Pos.X / 100.0))
+		posY := int(float64(bgHeight) * (item.CommonParam.Pos.Y / 100.0))
+		posX -= itemImage.Bounds().Dx() / 2
+		posY -= itemImage.Bounds().Dy() / 2
+		pos := image.Pt(posX, posY)
 		dstImage = imaging.Overlay(dstImage, itemImage, pos, item.CommonParam.Scale)
+		fmt.Println("hoge : ", pos)
 	}
 
 	// 画像を保存
