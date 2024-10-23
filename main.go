@@ -162,7 +162,6 @@ func main() {
 		posY -= itemImage.Bounds().Dy() / 2
 		pos := image.Pt(posX, posY)
 		dstImage = imaging.Overlay(dstImage, itemImage, pos, item.CommonParam.Scale)
-		fmt.Println("hoge : ", pos)
 	}
 
 	// 画像を保存
