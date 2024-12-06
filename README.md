@@ -32,6 +32,11 @@ project-root/
     "bgImg": {
         "filePath": "background.png"
     },
+    "output": {
+        "size":
+            "x": 1125,
+            "y": 600
+    },
     "compositeItemList": [
         {
             "commonParam": {
@@ -84,6 +89,8 @@ project-root/
 
 - `bgImg`: 背景画像の設定。
   - `filePath`: 背景画像のファイルパス。
+- `output`: 生成画像に関する設定
+  - `size`: 画像サイズの指定。そのサイズに合わせて拡縮する。指定しなくても良い。
 - `compositeItemList`: 背景画像に合成するアイテムのリスト。
   - `commonParam`: 各アイテムの共通パラメータ。
     - `type`: アイテムのタイプ（`image` または `text`）。

@@ -15,6 +15,7 @@ import (
 
 type Config struct {
 	BgImg             ImageConfig     `json:"bgImg"`
+	Output            OutputConfig    `json:"output"` // 追加
 	CompositeItemList []CompositeItem `json:"compositeItemList"`
 }
 
@@ -45,6 +46,13 @@ type SpecificParam struct {
 type Position struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
+}
+
+type OutputConfig struct {
+	Size struct {
+		X int `json:"x"`
+		Y int `json:"y"`
+	} `json:"size"`
 }
 
 func loadImage(filePath string) (image.Image, error) {
@@ -148,6 +156,13 @@ func main() {
 
 		dstImage = imaging.Overlay(dstImage, itemImage, pos, 1.0) // 透過度を1.0に設定して完全に表示
 	}
+
+	// リサイズ処理
+	if config.Output.Size.X > 0 && config.Output.Size.Y > 0 {
+		dstImage = imaging.Resize(dstImage, config.Output.Size.X, config.Output.Size.Y, imaging.Lanczos)
+		fmt.Printf("Resized output image to: %dx%d\n", config.Output.Size.X, config.Output.Size.Y)
+	}
+
 
 	// 画像を保存
 	if err := imaging.Save(dstImage, outputFilePath); err != nil {
