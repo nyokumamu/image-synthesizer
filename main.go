@@ -11,8 +11,6 @@ import (
 	"strings"
 
 	"github.com/disintegration/imaging"
-	"golang.org/x/image/font"
-	"golang.org/x/image/math/fixed"
 )
 
 type Config struct {
@@ -77,36 +75,17 @@ func parseHexColor(s string) (color.RGBA, error) {
 	}
 }
 
-func drawText(img *image.NRGBA, text string, pos image.Point, col color.Color, fontFace font.Face, align string) {
-	lines := strings.Split(text, "\\n")
-	for i, line := range lines {
-		var x fixed.Int26_6
-		textWidth := font.MeasureString(fontFace, line).Round()
-		switch align {
-		case "center":
-			x = fixed.I(pos.X - textWidth/2)
-		case "right":
-			x = fixed.I(pos.X - textWidth)
-		default:
-			x = fixed.I(pos.X)
-		}
-		y := pos.Y + i*fontFace.Metrics().Height.Ceil()
-		d := &font.Drawer{
-			Dst:  img,
-			Src:  image.NewUniform(col),
-			Face: fontFace,
-			Dot:  fixed.Point26_6{X: x, Y: fixed.I(y)},
-		}
-		d.DrawString(line)
-	}
-}
-
 func main() {
 	// 設定ファイルパスのフラグを追加
 	configPath := flag.String("conf", "", "設定JSONファイルのパス")
 	flag.Parse()
 
-	// 設定ファイルを読み込む
+	if *configPath == "" {
+		fmt.Println("設定ファイルのパスを指定してください")
+		return
+	}
+
+	// 設定ファイルを開く
 	configFile, err := os.Open(*configPath)
 	if err != nil {
 		fmt.Println("設定ファイルを開く際のエラー:", err)
@@ -154,6 +133,11 @@ func main() {
 			fmt.Println("アイテム画像を読み込む際のエラー:", err)
 			return
 		}
+		// スケールパラメータに基づいて画像をリサイズ
+		if item.CommonParam.Scale != 1.0 {
+			itemImage = imaging.Resize(itemImage, int(float64(itemImage.Bounds().Dx())*item.CommonParam.Scale), 0, imaging.Lanczos)
+		}
+
 		bgWidth := dstImage.Bounds().Dx()
 		bgHeight := dstImage.Bounds().Dy()
 		posX := int(float64(bgWidth) * (item.CommonParam.Pos.X / 100.0))
@@ -161,7 +145,8 @@ func main() {
 		posX -= itemImage.Bounds().Dx() / 2
 		posY -= itemImage.Bounds().Dy() / 2
 		pos := image.Pt(posX, posY)
-		dstImage = imaging.Overlay(dstImage, itemImage, pos, item.CommonParam.Scale)
+
+		dstImage = imaging.Overlay(dstImage, itemImage, pos, 1.0) // 透過度を1.0に設定して完全に表示
 	}
 
 	// 画像を保存
