@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	"image/color"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +14,7 @@ import (
 
 type Config struct {
 	BgImg             ImageConfig     `json:"bgImg"`
-	Output            OutputConfig    `json:"output"` // 追加
+	Output            OutputConfig    `json:"output"`
 	CompositeItemList []CompositeItem `json:"compositeItemList"`
 }
 
@@ -63,55 +62,24 @@ func loadImage(filePath string) (image.Image, error) {
 	return img, nil
 }
 
-func parseHexColor(s string) (color.RGBA, error) {
-	c := color.RGBA{A: 0xff}
-	if s[0] != '#' {
-		return c, fmt.Errorf("invalid color format")
-	}
-	switch len(s) {
-	case 7:
-		_, err := fmt.Sscanf(s[1:], "%02x%02x%02x", &c.R, &c.G, &c.B)
-		return c, err
-	case 4:
-		_, err := fmt.Sscanf(s[1:], "%1x%1x%1x", &c.R, &c.G, &c.B)
-		c.R *= 17
-		c.G *= 17
-		c.B *= 17
-		return c, err
-	default:
-		return c, fmt.Errorf("invalid color format")
-	}
-}
-
-func main() {
-	// 設定ファイルパスのフラグを追加
-	configPath := flag.String("conf", "", "設定JSONファイルのパス")
-	flag.Parse()
-
-	if *configPath == "" {
-		fmt.Println("設定ファイルのパスを指定してください")
-		return
-	}
-
+func processConfig(configPath string) error {
 	// 設定ファイルを開く
-	configFile, err := os.Open(*configPath)
+	fmt.Println("conf: ", configPath)
+	configFile, err := os.Open(configPath)
 	if err != nil {
-		fmt.Println("設定ファイルを開く際のエラー:", err)
-		return
+		return fmt.Errorf("- 設定ファイルを開く際のエラー: %v", err)
 	}
 	defer configFile.Close()
 
 	var config Config
 	if err := json.NewDecoder(configFile).Decode(&config); err != nil {
-		fmt.Println("設定ファイルをデコードする際のエラー:", err)
-		return
+		return fmt.Errorf("- 設定ファイルをデコードする際のエラー: %v", err)
 	}
 
 	// 設定ファイルのパスを基に出力ファイルのパスを決定
-	relPath, err := filepath.Rel("conf", *configPath)
+	relPath, err := filepath.Rel("conf", configPath)
 	if err != nil {
-		fmt.Println("設定ファイルの相対パスを取得する際のエラー:", err)
-		return
+		return fmt.Errorf("- 設定ファイルの相対パスを取得する際のエラー: %v", err)
 	}
 	outputFilePath := filepath.Join("dst", strings.TrimSuffix(relPath, filepath.Ext(relPath))+".png")
 
@@ -119,29 +87,26 @@ func main() {
 	outputDir := filepath.Dir(outputFilePath)
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
-			fmt.Println("出力ディレクトリを作成する際のエラー:", err)
-			return
+			return fmt.Errorf("- 出力ディレクトリを作成する際のエラー: %v", err)
 		}
 	}
 
-	// 背景画像の読み込み (srcディレクトリを前置)
+	// 背景画像の読み込み
 	bgImage, err := loadImage(filepath.Join("src", config.BgImg.FilePath))
 	if err != nil {
-		fmt.Println("背景画像を読み込む際のエラー:", err)
-		return
+		return fmt.Errorf("- 背景画像を読み込む際のエラー: %v", err)
 	}
 
 	// 出力画像の作成
 	dstImage := imaging.Clone(bgImage)
 
-	// 合成アイテムの処理 (srcディレクトリを前置)
+	// 合成アイテムの処理
 	for _, item := range config.CompositeItemList {
 		itemImage, err := loadImage(filepath.Join("src", item.SpecificParam.FilePath))
 		if err != nil {
-			fmt.Println("アイテム画像を読み込む際のエラー:", err)
-			return
+			return fmt.Errorf("- アイテム画像を読み込む際のエラー: %v", err)
 		}
-		// スケールパラメータに基づいて画像をリサイズ
+		// 画像のリサイズ
 		if item.CommonParam.Scale != 1.0 {
 			itemImage = imaging.Resize(itemImage, int(float64(itemImage.Bounds().Dx())*item.CommonParam.Scale), 0, imaging.Lanczos)
 		}
@@ -154,21 +119,63 @@ func main() {
 		posY -= itemImage.Bounds().Dy() / 2
 		pos := image.Pt(posX, posY)
 
-		dstImage = imaging.Overlay(dstImage, itemImage, pos, 1.0) // 透過度を1.0に設定して完全に表示
+		dstImage = imaging.Overlay(dstImage, itemImage, pos, 1.0)
 	}
 
 	// リサイズ処理
 	if config.Output.Size.X > 0 && config.Output.Size.Y > 0 {
 		dstImage = imaging.Resize(dstImage, config.Output.Size.X, config.Output.Size.Y, imaging.Lanczos)
-		fmt.Printf("Resized output image to: %dx%d\n", config.Output.Size.X, config.Output.Size.Y)
 	}
-
 
 	// 画像を保存
 	if err := imaging.Save(dstImage, outputFilePath); err != nil {
-		fmt.Println("出力画像を保存する際のエラー:", err)
+		return fmt.Errorf("- 出力画像を保存する際のエラー: %v", err)
+	}
+
+	fmt.Println("- 出力画像を保存しました:")
+	return nil
+}
+
+func main() {
+	// フラグの追加
+	configPath := flag.String("conf", "", "設定JSONファイルのパス")
+	configDir := flag.String("confDir", "", "設定JSONファイルのディレクトリ")
+	flag.Parse()
+
+	// 両方が指定された場合はエラー
+	if *configPath != "" && *configDir != "" {
+		fmt.Println("confオプションとconfDirオプションは同時に指定できません")
 		return
 	}
 
-	fmt.Println("出力画像を保存しました:", outputFilePath)
+	// confのみが指定された場合
+	if *configPath != "" {
+		if err := processConfig(*configPath); err != nil {
+			fmt.Println("エラー:", err)
+		}
+		return
+	}
+
+	// confDirのみが指定された場合
+	if *configDir != "" {
+		err := filepath.Walk(*configDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() && strings.HasSuffix(path, ".json") {
+				if err := processConfig(path); err != nil {
+					fmt.Println("- 処理中にエラー:\n", err)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			fmt.Println("ディレクトリ処理中のエラー:", err)
+		}
+		return
+	}
+
+	// どちらも指定されていない場合
+	fmt.Println("confオプションまたはconfDirオプションのいずれかを指定してください")
 }
+
