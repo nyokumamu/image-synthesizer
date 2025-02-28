@@ -1,153 +1,112 @@
 # 画像合成ツール
 
-このツールは、設定ファイルに基づいて画像とテキストを合成することができます。設定ファイルには、合成する画像やテキスト、それらの位置、拡大縮小などの属性が指定されています。
+このツールは、設定ファイル（JSON）に従い、素材画像を合成して出力画像を生成するGo言語のプログラムです。
+
+## 概要
+
+- `conf`ディレクトリ内のJSON設定ファイルに基づいて、`src`ディレクトリに配置された素材画像を合成し、最終的な画像を`dst`ディレクトリに出力します。
+- 背景画像や複数のアイテム画像を指定した位置・スケールで合成できます。
+
+## 事前準備
+
+- Go言語の実行環境が必要です。
+  - Goのインストール：[https://go.dev/doc/install](https://go.dev/doc/install)
+- 素材画像を`src`ディレクトリに配置しておく必要があります。
+- 設定ファイル（JSON）は`conf`ディレクトリ内に配置してください。
 
 ## ディレクトリ構成
 
 ```
-project-root/
-├── conf/
-│   └── config.json
-├── dst/
-├── src/
-│   ├── background.png
-│   ├── image1.png
-│   └── image2.png
-├── setup.sh
-└── main.go
+.
+├── main.go
+├── conf          # JSON設定ファイル配置ディレクトリ
+├── src           # 素材画像配置ディレクトリ
+└── dst           # 出力画像生成ディレクトリ（自動生成）
 ```
 
-- `conf/`: 設定ファイルを含むディレクトリ。
-- `dst/`: 出力画像が保存されるディレクトリ。
-- `src/`: ソース画像を含むディレクトリ。
-- `setup.sh`: 環境セットアップ用プログラムファイル。
-- `main.go`: メインの Go プログラムファイル。
-
-## 設定ファイル
-
-設定ファイルは以下の構造を持つ JSON ファイルです：
+## 設定ファイルの構造（例）
 
 ```json
 {
-    "bgImg": {
-        "filePath": "background.png"
-    },
-    "output": {
-        "size":
-            "x": 1125,
-            "y": 600
-    },
-    "compositeItemList": [
-        {
-            "commonParam": {
-                "type": "image",
-                "depth": 1,
-                "scale": 1.0,
-                "pos": {
-                    "x": 40,
-                    "y": 50
-                }
-            },
-            "specificParam": {
-                "filePath": "image1.png"
-            }
-        },
-        {
-            "commonParam": {
-                "type": "image",
-                "depth": 2,
-                "scale": 1.0,
-                "pos": {
-                    "x": 60,
-                    "y": 50
-                }
-            },
-            "specificParam": {
-                "filePath": "image1.png"
-            }
-        },
-        {
-            "commonParam": {
-                "type": "text",
-                "depth": 3,
-                "scale": 1.0,
-                "pos": {
-                    "x": 50,
-                    "y": 75
-                },
-                "align": "center"
-            },
-            "specificParam": {
-                "text": "Hello, World!",
-                "font": "Arial Unicode",
-                "color": "#FF0000"
-            }
-        }
-    ]
+  "bgImg": {
+    "filePath": "background.png"
+  },
+  "output": {
+    "size": { "x": 800, "y": 600 }
+  },
+  "compositeItemList": [
+    {
+      "commonParam": {
+        "type": "image",
+        "depth": 1,
+        "scale": 0.5,
+        "pos": { "x": 50, "y": 50 }
+      },
+      "specificParam": {
+        "filePath": "icon.png"
+      }
+    }
+  ]
 }
 ```
 
-- `bgImg`: 背景画像の設定。
-  - `filePath`: 背景画像のファイルパス。
-- `output`: 生成画像に関する設定
-  - `size`: 画像サイズの指定。そのサイズに合わせて拡縮する。指定しなくても良い。
-- `compositeItemList`: 背景画像に合成するアイテムのリスト。
-  - `commonParam`: 各アイテムの共通パラメータ。
-    - `type`: アイテムのタイプ（`image` または `text`）。
-    - `depth`: アイテムの深さ（z-index）。
-    - `scale`: アイテムのスケールファクター。
-    - `pos`: アイテムの位置。
-      - `x`: x座標（パーセンテージ）。
-      - `y`: y座標（パーセンテージ）。
-    - `align`: テキストの整列（`left`、`center`、`right`）。
-  - `specificParam`: 各アイテムの特定パラメータ。
-    - `filePath`: 画像のファイルパス（`image` タイプの場合）。
-    - `text`: テキスト内容（`text` タイプの場合）。
-    - `font`: フォント名（`text` タイプの場合）。
-    - `color`: テキストの色（`text` タイプの場合）。
+| 項目 | 説明 | 備考 |
+|------|------|------|
+| bgImg.filePath | 背景画像のパス（srcからの相対パス）| 必須 |
+| output.size | 出力画像サイズ（px単位） | 任意（未指定の場合は背景画像サイズ）|
+| compositeItemList | 合成アイテムのリスト | 任意（複数指定可能）|
 
-## セットアップ
+### compositeItemList の設定項目
 
-必要なGolang環境のセットアップと必要なモジュールのインストールを行うために、以下の手順に従ってください。
+| 項目 | 説明 | 備考 |
+|------|------|------|
+| commonParam.type | アイテムのタイプ（現状は `image` のみ対応）| 必須 |
+| commonParam.depth | レイヤーの深さ（合成順序）| 数値が小さいほど下層 |
+| commonParam.scale | アイテム画像の拡大縮小率 | 1.0で原寸 |
+| commonParam.pos | 配置位置（%） | 画像中央を基準として配置 |
+| specificParam.filePath | アイテム画像のパス（srcからの相対パス）| 必須 |
 
-1. **スクリプトに実行権限を付与（Linux/Macのみ）:**
+## 実行方法
 
-```
-chmod +x setup.sh
+### 単一の設定ファイルを指定する場合
+
+```bash
+go run main.go --conf=conf/example.json
 ```
 
-3. **セットアップスクリプトを実行:**
+### 設定ファイルが入ったディレクトリを指定して一括処理する場合
 
-```
-./setup.sh
-```
-
-## プログラムの実行
-
-1. 背景画像と合成したい画像を `src/` ディレクトリに配置します。
-2. 設定ファイルを `conf/` ディレクトリに作成します。
-3. 次のコマンドを使用してプログラムを実行します：
-
-```
-go run main.go --conf your_config.json
+```bash
+go run main.go --confDir=conf
 ```
 
-`your_config.json` を設定ファイルの名前に置き換えてください。
+### コマンドオプション
 
-## 例
+| オプション名 | 説明 |
+|--------------|------|
+| `--conf`     | 単一の設定ファイル（JSON）を指定 |
+| `--confDir`  | 設定ファイルが含まれるディレクトリを指定（*.json をすべて処理）|
 
-`conf/` ディレクトリに `example_config.json` という例の設定ファイルが提供されています。
+※ `--conf` と `--confDir` は同時に指定できません。
 
-## フォント
+## 出力結果
 
-指定されたフォントがシステム上に存在することを確認してください。プログラムは次のディレクトリでフォントを探します：
+設定ファイルの名前と同じ名前の画像ファイルが、`dst`ディレクトリ内に生成されます。  
+例：  
+- 設定ファイル: `conf/example.json` → 出力画像: `dst/example.png`
 
-- Windows: `C:\\Windows\\Fonts`
-- macOS: `/Library/Fonts`
+## ライブラリ依存
 
-フォントが見つからない場合、プログラムはエラーを返します。
+このプログラムは、以下の外部ライブラリに依存しています。  
+- [imaging](https://github.com/disintegration/imaging)
+
+インストール方法（Goモジュールを利用している場合）:
+
+```bash
+go get github.com/disintegration/imaging
+```
 
 ## ライセンス
 
-このプロジェクトは MIT ライセンスの下でライセンスされています。詳細は LICENSE ファイルを参照してください。
+本プログラムのライセンスについては、プロジェクト管理者にお問い合わせください。
 
